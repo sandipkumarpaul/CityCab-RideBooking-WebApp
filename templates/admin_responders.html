@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Community Responders Roster{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-shield-halved me-2 text-warning"></i>Community Safety Responders Network</h4>
+            <span class="text-secondary small">Crowdsourced emergency first-responders, university campus security, and civilian safety heroes</span>
+        </div>
+        <span class="badge bg-warning text-dark fs-6 px-3 py-2">{{ responders|length }} Active Responders</span>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="uber-card p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-secondary extra-small text-uppercase fw-bold">Active Responders</span>
+                        <h2 class="fw-bold text-white mb-0 mt-1">{{ responders|length }}</h2>
+                        <span class="text-secondary extra-small">Ready for SOS emergency dispatch</span>
+                    </div>
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 text-warning">
+                        <i class="fa-solid fa-users-viewfinder fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="uber-card p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-secondary extra-small text-uppercase fw-bold">Total Rescues Verified</span>
+                        <h2 class="fw-bold text-success mb-0 mt-1">{{ total_rescues }}</h2>
+                        <span class="text-secondary extra-small">Distress incidents safely resolved</span>
+                    </div>
+                    <div class="rounded-circle bg-success bg-opacity-10 p-3 text-success">
+                        <i class="fa-solid fa-triangle-exclamation fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="uber-card p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-secondary extra-small text-uppercase fw-bold">Hero Rewards Distributed</span>
+                        <h2 class="fw-bold text-warning mb-0 mt-1">${{ "%.2f"|format(total_rewards_paid) }}</h2>
+                        <span class="text-secondary extra-small">$10.00 direct wallet credit per verified rescue</span>
+                    </div>
+                    <div class="rounded-circle bg-warning bg-opacity-10 p-3 text-warning">
+                        <i class="fa-solid fa-award fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Responders Table -->
+    <div class="uber-card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-id-badge me-2 text-warning"></i>Verified Community Responders Roster</h5>
+            <span class="badge bg-secondary">System Certified</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Responder Name & ID</th>
+                        <th>Contact Phone</th>
+                        <th>Email Address</th>
+                        <th>Badge Tier</th>
+                        <th>Verified Rescues</th>
+                        <th>Rewards Earned</th>
+                        <th>Wallet Balance</th>
+                        <th>Status</th>
+                        <th>Member Since</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in responders %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="driver-avatar bg-warning text-dark fw-bold" style="width: 38px; height: 38px;">
+                                    {{ r.full_name[0] }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-white">{{ r.full_name }}</div>
+                                    <span class="extra-small text-secondary font-monospace">ID #CITY-RES-{{ r.id }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-light small font-monospace">{{ r.phone }}</td>
+                        <td class="text-secondary small">{{ r.email }}</td>
+                        <td>
+                            {% if r.total_rescues >= 5 %}
+                                <span class="badge bg-warning text-dark"><i class="fa-solid fa-crown me-1"></i>Gold Hero</span>
+                            {% elif r.total_rescues >= 1 %}
+                                <span class="badge bg-info text-dark"><i class="fa-solid fa-medal me-1"></i>Active Hero</span>
+                            {% else %}
+                                <span class="badge bg-secondary"><i class="fa-solid fa-shield me-1"></i>Guardian</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-dark border border-warning text-warning fw-bold px-3 py-1">
+                                <i class="fa-solid fa-person-running me-1"></i>{{ r.total_rescues }} Rescues
+                            </span>
+                        </td>
+                        <td class="fw-bold text-warning">${{ "%.2f"|format(r.total_rescue_rewards) }}</td>
+                        <td class="fw-bold text-success">${{ "%.2f"|format(r.wallet_balance) }}</td>
+                        <td>
+                            <span class="badge badge-uber-success rounded-pill px-3 py-1">
+                                <i class="fa-solid fa-circle text-success extra-small me-1"></i>On-Duty (Ready)
+                            </span>
+                        </td>
+                        <td class="text-secondary extra-small">{{ r.created_at.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center text-secondary py-5">
+                            <i class="fa-solid fa-shield-halved fs-1 text-secondary mb-3 d-block"></i>
+                            No registered community responders found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

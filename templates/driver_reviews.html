@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Driver Reviews & Ratings{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <div class="uber-card p-4 text-center h-100">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Overall Rating Score</span>
+                <h1 class="display-4 text-warning fw-bold my-2">★ {{ "%.1f"|format(profile.average_rating) }}</h1>
+                <div class="text-secondary small mb-3">Based on {{ profile.rating_count }} passenger reviews</div>
+                <div class="bg-black p-3 rounded-3 border border-secondary text-start extra-small text-secondary">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>5 Stars</span>
+                        <span class="text-warning">100%</span>
+                    </div>
+                    <div class="progress bg-secondary mb-2" style="height: 4px;">
+                        <div class="progress-bar bg-warning" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="uber-card p-4 h-100">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-comments me-2 text-warning"></i>Passenger Feedback & Comments</h5>
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Passenger</th>
+                                <th>Rating</th>
+                                <th>Comment</th>
+                                <th class="text-end">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rev in reviews %}
+                            <tr>
+                                <td class="fw-semibold text-white small">{{ rev.passenger_name }}</td>
+                                <td>
+                                    <span class="text-warning fw-bold">★ {{ rev.rating }}/5</span>
+                                </td>
+                                <td class="text-light small">{{ rev.comment or 'Clean car and polite driver' }}</td>
+                                <td class="text-end text-secondary extra-small">{{ rev.created_at.strftime('%b %d, %Y') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-secondary py-5">
+                                    <i class="fa-solid fa-star fs-1 text-secondary mb-3 d-block"></i>
+                                    No reviews received yet. Complete trips to build your driver reputation!
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

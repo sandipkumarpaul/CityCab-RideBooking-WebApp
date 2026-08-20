@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Users Directory & Roles{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-users me-2 text-warning"></i>Platform Users & Role Management</h4>
+            <span class="text-secondary small">Manage passenger, driver, responder, and admin accounts</span>
+        </div>
+        <span class="badge bg-warning text-dark fs-6 px-3 py-2">{{ all_users|length }} Total Users</span>
+    </div>
+
+    <div class="uber-card p-4">
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>User Name</th>
+                        <th>Email Address</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Wallet Balance</th>
+                        <th>Activity & Metrics</th>
+                        <th>Joined</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in all_users %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold text-white">{{ u.full_name }}</div>
+                            <div class="text-secondary extra-small">User ID #{{ u.id }}</div>
+                        </td>
+                        <td class="text-secondary small">{{ u.email }}</td>
+                        <td class="text-light small font-monospace">{{ u.phone }}</td>
+                        <td>
+                            <span class="badge {% if u.role == 'admin' %}bg-danger{% elif u.role == 'driver' %}bg-info text-dark{% elif u.role == 'responder' %}bg-warning text-dark{% else %}bg-secondary{% endif %} text-uppercase">
+                                {{ u.role }}
+                            </span>
+                        </td>
+                        <td class="fw-bold text-success">${{ "%.2f"|format(u.wallet_balance) }}</td>
+                        <td>
+                            {% if u.role == 'passenger' %}
+                                <span class="badge bg-dark border border-secondary text-light">
+                                    <i class="fa-solid fa-car me-1 text-warning"></i>{{ u.total_trips }} Trips (${{ "%.2f"|format(u.total_spent) }})
+                                </span>
+                            {% elif u.role == 'driver' %}
+                                <span class="badge bg-dark border border-info text-info">
+                                    <i class="fa-solid fa-taxi me-1"></i>{{ u.driver_profile.vehicle_tier if u.driver_profile else 'Driver' }} (★ {{ u.driver_profile.average_rating if u.driver_profile else '5.0' }})
+                                </span>
+                            {% elif u.role == 'responder' %}
+                                <span class="badge bg-dark border border-warning text-warning">
+                                    <i class="fa-solid fa-shield-halved me-1"></i>{{ u.total_rescues }} Rescues (${{ "%.2f"|format(u.total_rescue_rewards) }})
+                                </span>
+                            {% elif u.role == 'admin' %}
+                                <span class="badge bg-dark border border-danger text-danger">
+                                    <i class="fa-solid fa-crown me-1"></i>Master Admin
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary extra-small">{{ u.created_at.strftime('%b %d, %Y') }}</td>
+                        <td class="text-end">
+                            {% if u.id != current_user.id %}
+                            <form action="{{ url_for('admin_delete_user', user_id=u.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle" onclick="return confirm('Permanently remove user {{ u.full_name }}?')">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="badge bg-dark border border-secondary text-secondary">Logged In</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

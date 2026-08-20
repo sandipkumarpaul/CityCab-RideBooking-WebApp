@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Register Account{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="card shadow-lg border-secondary">
+                <div class="card-header bg-black text-center py-3">
+                    <h3 class="fw-bold text-warning mb-0"><i class="fa-solid fa-user-plus me-2"></i>Create Account</h3>
+                    <p class="text-secondary small mb-0 mt-1">Join CityCab as a Passenger or Driver</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('register') }}">
+                        <div class="mb-3">
+                            <label class="form-label text-light fw-semibold">I am registering as a:</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="role" id="role_passenger" value="passenger" checked onchange="toggleDriverFields()">
+                                <label class="btn btn-outline-warning fw-bold py-2" for="role_passenger">🚖 Passenger</label>
+
+                                <input type="radio" class="btn-check" name="role" id="role_driver" value="driver" onchange="toggleDriverFields()">
+                                <label class="btn btn-outline-info fw-bold py-2" for="role_driver">🚕 Driver</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-light fw-semibold">Full Name</label>
+                            <input type="text" name="full_name" class="form-control bg-secondary text-white border-0" placeholder="John Doe" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-light fw-semibold">Email Address</label>
+                                <input type="email" name="email" class="form-control bg-secondary text-white border-0" placeholder="john@example.com" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-light fw-semibold">Phone Number</label>
+                                <input type="text" name="phone" class="form-control bg-secondary text-white border-0" placeholder="+8801700000000" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-light fw-semibold">Password</label>
+                            <input type="password" name="password" class="form-control bg-secondary text-white border-0" placeholder="••••••••" required>
+                        </div>
+
+                        <div id="driver_fields" class="p-3 bg-black rounded border border-info mb-3 d-none">
+                            <h6 class="text-info fw-bold mb-3"><i class="fa-solid fa-car me-2"></i>Driver Vehicle Details</h6>
+                            <div class="mb-2">
+                                <label class="form-label text-light small">Vehicle Model</label>
+                                <input type="text" name="vehicle_model" class="form-control bg-secondary text-white border-0 form-control-sm" placeholder="e.g. Toyota Axio / Honda Grace">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-light small">Vehicle Tier</label>
+                                    <select name="vehicle_tier" class="form-select bg-secondary text-white border-0 form-select-sm">
+                                        <option value="Economy">Economy (Standard)</option>
+                                        <option value="Comfort" selected>Comfort (Sedan/AC)</option>
+                                        <option value="Premium">Premium (Luxury)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label class="form-label text-light small">License Plate</label>
+                                    <input type="text" name="license_plate" class="form-control bg-secondary text-white border-0 form-control-sm" placeholder="e.g. DKA-11-2233">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-warning w-100 fw-bold py-2 fs-5 shadow-sm mt-2">
+                            Complete Registration
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <span class="text-secondary">Already have an account?</span>
+                        <a href="{{ url_for('login') }}" class="text-warning fw-semibold ms-1">Login Here</a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDriverFields() {
+    const isDriver = document.getElementById('role_driver').checked;
+    const fields = document.getElementById('driver_fields');
+    if (isDriver) {
+        fields.classList.remove('d-none');
+    } else {
+        fields.classList.add('d-none');
+    }
+}
+</script>
+{% endblock %}

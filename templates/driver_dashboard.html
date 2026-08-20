@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Driver Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="uber-card p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary extra-small text-uppercase fw-bold">Vehicle & Plate</span>
+                    <h5 class="fw-bold text-white mb-0 mt-1">{{ profile.vehicle_model }}</h5>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <span class="badge bg-secondary">{{ profile.vehicle_tier }}</span>
+                        <span class="text-warning small font-monospace">{{ profile.license_plate }}</span>
+                    </div>
+                </div>
+                <span class="fs-1">🚕</span>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="uber-card p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary extra-small text-uppercase fw-bold">Driver Status</span>
+                    <h6 class="fw-bold mb-0 mt-1 {% if profile.is_available %}text-success{% else %}text-danger{% endif %}" id="driver-status-text">
+                        {% if profile.is_available %}🟢 ONLINE & READY{% else %}🔴 BUSY / OFFLINE{% endif %}
+                    </h6>
+                </div>
+                <button class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="toggleDriverAvailability()">
+                    <i class="fa-solid fa-power-off me-1"></i> Toggle
+                </button>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="uber-card p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary extra-small text-uppercase fw-bold">Driver Rating</span>
+                    <h3 class="fw-bold text-warning mb-0 mt-1">★ {{ "%.1f"|format(profile.average_rating) }}</h3>
+                    <span class="text-secondary extra-small">{{ profile.rating_count }} passenger reviews</span>
+                </div>
+                <span class="fs-1 text-warning">⭐</span>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="uber-card p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary extra-small text-uppercase fw-bold">Driver Net Payout (85%)</span>
+                    <h3 class="fw-bold text-success mb-0 mt-1">${{ "%.2f"|format(total_earnings * 0.85) }}</h3>
+                    <span class="text-secondary extra-small">{{ completed_rides|length }} finished trips</span>
+                </div>
+                <span class="fs-1 text-success">💵</span>
+            </div>
+        </div>
+    </div>
+
+    {% if active_ride %}
+    <div class="uber-card p-4 mb-4 border-warning bg-black">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-warning mb-0"><i class="fa-solid fa-taxi me-2"></i>Active Trip in Progress</h5>
+            <span class="badge bg-warning text-dark text-uppercase px-3 py-2 rounded-pill fw-bold">{{ active_ride.status }}</span>
+        </div>
+
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <div class="driver-avatar" style="width:40px; height:40px; font-size:1rem;">
+                        {{ active_ride.passenger.full_name[0] }}
+                    </div>
+                    <div>
+                        <h6 class="fw-bold text-white mb-0">Passenger: {{ active_ride.passenger.full_name }}</h6>
+                        <span class="text-secondary small"><i class="fa-solid fa-phone me-1"></i>{{ active_ride.passenger.phone }}</span>
+                    </div>
+                </div>
+
+                <div class="bg-dark p-3 rounded-3 border border-secondary my-2">
+                    <div class="small text-light mb-1"><i class="fa-solid fa-circle text-success me-2"></i><strong>Pickup:</strong> {{ active_ride.pickup_address }}</div>
+                    <div class="small text-light"><i class="fa-solid fa-square text-danger me-2"></i><strong>Dropoff:</strong> {{ active_ride.dropoff_address }}</div>
+                </div>
+
+                <div class="text-success fw-bold fs-5">
+                    Est. Payout: ${{ "%.2f"|format(active_ride.estimated_fare * 0.85) }} <span class="text-secondary small">({{ active_ride.distance_km }} km • {{ active_ride.vehicle_tier }})</span>
+                </div>
+            </div>
+
+            <div class="col-lg-4 text-lg-end">
+                {% if active_ride.status == 'accepted' %}
+                    <button class="btn btn-warning btn-lg fw-bold w-100 rounded-pill py-3 text-dark" onclick="updateRideStatus('{{ active_ride.id }}', 'en_route')">
+                        🚀 Start Journey (En-Route)
+                    </button>
+                {% elif active_ride.status == 'en_route' %}
+                    <button class="btn btn-success btn-lg fw-bold w-100 rounded-pill py-3" onclick="updateRideStatus('{{ active_ride.id }}', 'completed')">
+                        ✅ Complete Trip & Collect Fare
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="uber-card p-4 mb-4">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-list-check me-2 text-warning"></i>Nearby Incoming Ride Requests</h5>
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Passenger</th>
+                                <th>Route</th>
+                                <th>Payout</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ride in requested_rides %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-white small">{{ ride.passenger.full_name }}</div>
+                                    <div class="text-secondary extra-small">{{ ride.passenger.phone }}</div>
+                                </td>
+                                <td>
+                                    <div class="small text-light">{{ ride.pickup_address }}</div>
+                                    <div class="small text-secondary">&darr; {{ ride.dropoff_address }}</div>
+                                </td>
+                                <td class="fw-bold text-success">${{ "%.2f"|format(ride.estimated_fare * 0.85) }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-warning btn-sm fw-bold rounded-pill px-3 text-dark" onclick="acceptRide('{{ ride.id }}')">
+                                        Accept Trip
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-secondary py-4">No waiting ride requests nearby right now.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="uber-card p-4">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-star me-2 text-warning"></i>Passenger Reviews & Feedback</h5>
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Passenger</th>
+                                <th>Rating</th>
+                                <th>Comment</th>
+                                <th class="text-end">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rev in reviews %}
+                            <tr>
+                                <td class="fw-semibold text-white small">{{ rev.passenger_name }}</td>
+                                <td>
+                                    <span class="text-warning fw-bold">★ {{ rev.rating }}/5</span>
+                                </td>
+                                <td class="text-light small">{{ rev.comment or 'No written feedback' }}</td>
+                                <td class="text-end text-secondary extra-small">{{ rev.created_at.strftime('%b %d, %Y') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-secondary py-3">No reviews received yet. Complete trips to build your driver rating!</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="uber-card p-4 mb-4">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-check-double me-2 text-success"></i>Recent Completed Rides</h5>
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Passenger</th>
+                                <th>Distance</th>
+                                <th class="text-end">Earned</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ride in completed_rides %}
+                            <tr>
+                                <td>
+                                    <div class="small text-white">{{ ride.passenger.full_name }}</div>
+                                    <div class="extra-small text-secondary">{{ ride.created_at.strftime('%b %d, %H:%M') }}</div>
+                                </td>
+                                <td class="small">{{ "%.2f"|format(ride.distance_km) }} km</td>
+                                <td class="fw-bold text-success text-end">${{ "%.2f"|format(ride.estimated_fare * 0.85) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-secondary py-4">No completed trips logged yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

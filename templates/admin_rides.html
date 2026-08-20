@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Rides Audit & Revenue Breakdown{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-taxi me-2 text-success"></i>Platform Rides & Revenue Audit Log</h4>
+            <span class="text-secondary small">Comprehensive ride history with 85/15 commission breakdown</span>
+        </div>
+        <span class="badge bg-success text-dark fs-6 px-3 py-2">{{ all_rides|length }} Total Bookings</span>
+    </div>
+
+    <div class="uber-card p-4">
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Ride #</th>
+                        <th>Passenger</th>
+                        <th>Driver</th>
+                        <th>Route</th>
+                        <th>Tier</th>
+                        <th>Gross Fare</th>
+                        <th>Driver (85%)</th>
+                        <th>Platform (15%)</th>
+                        <th>Status</th>
+                        <th class="text-end">Receipt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ride in all_rides %}
+                    <tr>
+                        <td class="font-monospace text-warning">#{{ ride.id }}</td>
+                        <td>
+                            <div class="fw-semibold text-white small">{{ ride.passenger.full_name }}</div>
+                            <div class="text-secondary extra-small">{{ ride.created_at.strftime('%b %d, %Y %H:%M') }}</div>
+                        </td>
+                        <td>{{ ride.driver.full_name if ride.driver else 'Unassigned' }}</td>
+                        <td class="small text-secondary">{{ ride.pickup_address }} &rarr; {{ ride.dropoff_address }}</td>
+                        <td><span class="badge bg-secondary">{{ ride.vehicle_tier }}</span></td>
+                        <td class="fw-bold text-white">${{ "%.2f"|format(ride.estimated_fare) }}</td>
+                        <td class="text-success small">${{ "%.2f"|format(ride.estimated_fare * 0.85) }}</td>
+                        <td class="text-warning small">${{ "%.2f"|format(ride.estimated_fare * 0.15) }}</td>
+                        <td>
+                            {% if ride.status == 'completed' %}
+                                <span class="badge badge-uber-success rounded-pill px-3 py-1">Completed</span>
+                            {% elif ride.status == 'cancelled' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1">Cancelled</span>
+                            {% else %}
+                                <span class="badge badge-uber-warning rounded-pill px-3 py-1">{{ ride.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('view_html_receipt', ride_id=ride.id) }}" class="btn btn-outline-light btn-sm rounded-circle me-1" title="View Web Receipt">
+                                <i class="fa-solid fa-receipt text-info"></i>
+                            </a>
+                            <a href="{{ url_for('generate_invoice', ride_id=ride.id) }}" class="btn btn-outline-light btn-sm rounded-circle" title="Download PDF Receipt">
+                                <i class="fa-solid fa-file-pdf text-warning"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-secondary py-5">No ride bookings recorded yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

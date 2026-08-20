@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Community SOS Responder Hub{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="community-sos-card p-4">
+                <span class="text-danger extra-small text-uppercase fw-bold">Active SOS Emergency Radar</span>
+                <h2 class="fw-bold text-white mb-0 mt-1">{{ alerts|length }}</h2>
+                <span class="badge bg-danger rounded-pill px-2 py-1 mt-1">Live Dispatch</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Total Rescues Verified</span>
+                <h2 class="fw-bold text-warning mb-0 mt-1">{{ current_user.total_rescues }}</h2>
+                <span class="text-secondary extra-small">Community hero spot checks</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Total Hero Rewards Earned</span>
+                <h2 class="fw-bold text-success mb-0 mt-1">${{ "%.2f"|format(current_user.total_rescue_rewards) }}</h2>
+                <span class="text-secondary extra-small">$10 reward per verified response</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Wallet Balance</span>
+                <h2 class="fw-bold text-info mb-0 mt-1">${{ "%.2f"|format(current_user.wallet_balance) }}</h2>
+                <span class="text-secondary extra-small">Includes hero rewards</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="uber-card p-4 mb-4">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-map-location-dot me-2 text-danger"></i>Emergency Radar & Proximity Scanner</h5>
+                <div id="dashboard-map" class="rounded-3" style="height: 380px;"></div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="community-sos-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-danger mb-0 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i> URGENT SOS DISPATCH QUEUE
+                    </h5>
+                    <span class="badge bg-danger rounded-pill px-3 py-1">LIVE</span>
+                </div>
+                <p class="text-light small mb-3">
+                    Verified responders located at least <strong>1.0 km</strong> from the incident location can verify the spot to unlock an instant <strong>$10.00 Wallet Credit</strong>.
+                </p>
+
+                <div class="d-grid gap-3">
+                    {% for alert in alerts %}
+                    <div class="bg-black p-3 rounded-3 border border-danger">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i> Incident #{{ alert.id }}</span>
+                            <span class="badge bg-success font-monospace">+${{ "%.2f"|format(alert.reward_amount) }} Reward</span>
+                        </div>
+                        <div class="text-light small mb-1"><strong>Triggered By:</strong> {{ alert.trigger_user.full_name }}</div>
+                        <div class="text-secondary extra-small mb-2">
+                            <i class="fa-solid fa-location-dot text-danger me-1"></i> Location: [{{ alert.alert_lat }}, {{ alert.alert_lng }}]
+                        </div>
+                        <button type="button" class="btn btn-success w-100 fw-bold rounded-pill py-2 text-dark shadow" onclick="respondToSOS('{{ alert.id }}')">
+                            🚀 RESPOND & VERIFY SPOT (CLAIM $10)
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="bg-black p-4 rounded-3 border border-secondary text-center text-secondary">
+                        <i class="fa-solid fa-circle-check text-success fs-2 mb-2 d-block"></i>
+                        No active emergency dispatches currently. The city is peaceful!
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

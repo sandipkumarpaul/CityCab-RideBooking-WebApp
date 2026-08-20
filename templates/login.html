@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Log In{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="uber-card p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold text-white mb-1">What's your email?</h3>
+                    <p class="text-secondary small">Log in to your CityCab account</p>
+                </div>
+
+                <form method="POST" action="{{ url_for('login') }}" id="login-form">
+                    <div class="uber-input-group">
+                        <i class="fa-solid fa-envelope uber-input-icon"></i>
+                        <input type="email" name="email" id="email" class="form-control uber-input" placeholder="name@example.com" required>
+                    </div>
+
+                    <div class="uber-input-group mb-4">
+                        <i class="fa-solid fa-lock uber-input-icon"></i>
+                        <input type="password" name="password" id="password" class="form-control uber-input" placeholder="Enter password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-uber-black w-100 py-3 mb-3">
+                        Continue with Password
+                    </button>
+                </form>
+
+                <div class="text-center mb-4">
+                    <span class="text-secondary small">Don't have an account?</span>
+                    <a href="{{ url_for('register') }}" class="text-white fw-semibold small ms-1 text-decoration-underline">Sign up</a>
+                </div>
+
+                <hr class="border-secondary my-4">
+
+                <div class="bg-black p-3 rounded-3 border border-secondary">
+                    <div class="text-secondary extra-small fw-bold text-uppercase tracking-wider mb-2">
+                        <i class="fa-solid fa-bolt me-1 text-warning"></i> Quick 1-Click Demo Accounts:
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-secondary text-white btn-sm text-start py-2 border-secondary" onclick="fillDemo('sandip@example.com', 'pass123')">
+                            🚖 <strong>Passenger (Sandip)</strong> • Active Trip & SOS Demo
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary text-white btn-sm text-start py-2 border-secondary" onclick="fillDemo('responder@example.com', 'pass123')">
+                            🚨 <strong>SOS Community Responder</strong> • Claim $10 Reward
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary text-white btn-sm text-start py-2 border-secondary" onclick="fillDemo('karim@citycab.com', 'driver123')">
+                            🚕 <strong>Driver (Karim Rahman)</strong> • Accept Trips & Work
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary text-white btn-sm text-start py-2 border-secondary" onclick="fillDemo('admin@citycab.com', 'admin123')">
+                            🛡️ <strong>System Admin</strong> • Fleet Approvals & Analytics
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function fillDemo(email, password) {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = password;
+    document.getElementById('login-form').submit();
+}
+</script>
+{% endblock %}

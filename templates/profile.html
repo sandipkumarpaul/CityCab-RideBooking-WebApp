@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Profile & Safety Settings{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="uber-card p-4 text-center">
+                <div class="driver-avatar mx-auto mb-2" style="width: 56px; height: 56px; font-size: 1.5rem;">
+                    {{ user.full_name[0] }}
+                </div>
+                <h5 class="fw-bold text-white mb-0">{{ user.full_name }}</h5>
+                <span class="badge bg-warning text-dark text-uppercase extra-small mt-1">{{ user.role }}</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Wallet Balance</span>
+                <h3 class="fw-bold text-success mb-0 mt-1">${{ "%.2f"|format(user.wallet_balance) }}</h3>
+                <button class="btn btn-outline-success btn-sm rounded-pill mt-2 w-100" data-bs-toggle="modal" data-bs-target="#walletModal">
+                    + Top Up Funds
+                </button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">
+                    {% if user.role == 'responder' %}
+                        Verified Rescues
+                    {% elif user.role == 'driver' %}
+                        Vehicle Tier
+                    {% else %}
+                        Completed Trips
+                    {% endif %}
+                </span>
+                <h3 class="fw-bold text-warning mb-0 mt-1">
+                    {% if user.role == 'responder' %}
+                        {{ user.total_rescues }}
+                    {% elif user.role == 'driver' %}
+                        {{ user.driver_profile.vehicle_tier if user.driver_profile else 'Driver' }}
+                    {% else %}
+                        {{ user.total_trips }}
+                    {% endif %}
+                </h3>
+                <span class="text-secondary extra-small">
+                    {% if user.role == 'responder' %}
+                        Emergency interventions
+                    {% elif user.role == 'driver' %}
+                        Approved Fleet Vehicle
+                    {% else %}
+                        Lifetime safe journeys
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">
+                    {% if user.role == 'responder' %}
+                        Hero Rewards Earned
+                    {% elif user.role == 'driver' %}
+                        Driver Rating
+                    {% else %}
+                        Total Spent
+                    {% endif %}
+                </span>
+                <h3 class="fw-bold text-info mb-0 mt-1">
+                    {% if user.role == 'responder' %}
+                        ${{ "%.2f"|format(user.total_rescue_rewards) }}
+                    {% elif user.role == 'driver' %}
+                        ★ {{ user.driver_profile.average_rating if user.driver_profile else '5.0' }}
+                    {% else %}
+                        ${{ "%.2f"|format(user.total_spent) }}
+                    {% endif %}
+                </h3>
+                <span class="text-secondary extra-small">Member since {{ user.created_at.strftime('%b %Y') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-5">
+            <div class="uber-card p-4 mb-4">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-id-card me-2 text-warning"></i>Profile Details</h5>
+                <form method="POST" action="{{ url_for('profile') }}">
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold">Account Role</label>
+                        <input type="text" class="form-control uber-input text-warning fw-bold ps-3" value="{{ user.role|upper }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold">Full Name</label>
+                        <input type="text" name="full_name" class="form-control uber-input ps-3" value="{{ user.full_name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold">Email Address</label>
+                        <input type="email" class="form-control uber-input ps-3" value="{{ user.email }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold">Phone Number</label>
+                        <input type="text" name="phone" class="form-control uber-input ps-3" value="{{ user.phone }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold rounded-pill py-2 text-dark">Save Profile Changes</button>
+                </form>
+            </div>
+
+            <div class="uber-card p-4">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-key me-2 text-info"></i>Change Password</h5>
+                <form method="POST" action="{{ url_for('change_password') }}">
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold">Current Password</label>
+                        <input type="password" name="current_password" class="form-control uber-input ps-3" placeholder="••••••••" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold">New Password</label>
+                        <input type="password" name="new_password" class="form-control uber-input ps-3" placeholder="At least 4 characters" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold">Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control uber-input ps-3" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-outline-info w-100 fw-bold rounded-pill py-2">Update Password</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="uber-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-shield-halved me-2 text-danger"></i>Trusted Contacts & Emergency Safety</h5>
+                    <span class="badge bg-danger rounded-pill">{{ contacts|length }} Contacts</span>
+                </div>
+                <p class="text-secondary small mb-3">
+                    Trusted contacts receive simulated instant SMS & alert notifications whenever you trigger an Emergency SOS during a ride.
+                </p>
+
+                <form action="{{ url_for('add_trusted_contact') }}" method="POST" class="row g-2 mb-4 bg-black p-3 rounded-3 border border-secondary">
+                    <div class="col-md-5">
+                        <input type="text" name="contact_name" class="form-control uber-input form-control-sm ps-3" placeholder="Contact Name (e.g. Spouse)" required>
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" name="contact_phone" class="form-control uber-input form-control-sm ps-3" placeholder="Phone Number (+880...)" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold rounded-pill py-2 text-dark">+ Add</button>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Contact Name</th>
+                                <th>Phone Number</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contact in contacts %}
+                            <tr>
+                                <td class="fw-semibold text-warning"><i class="fa-solid fa-user-shield me-2"></i>{{ contact.contact_name }}</td>
+                                <td class="text-light">{{ contact.contact_phone }}</td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('delete_trusted_contact', contact_id=contact.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle" onclick="return confirm('Remove trusted contact?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-secondary py-3">No trusted contacts added yet. Add at least one for emergency alerts.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="uber-card p-4">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-clock-rotate-left me-2 text-warning"></i>Recent Rides & Travel Receipts</h5>
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Route</th>
+                                <th>Fare</th>
+                                <th>Status</th>
+                                <th class="text-end">Receipts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ride in rides %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-white small">{{ ride.pickup_address }} &rarr; {{ ride.dropoff_address }}</div>
+                                    <div class="text-secondary extra-small">{{ ride.created_at.strftime('%b %d, %Y %H:%M') }}</div>
+                                </td>
+                                <td class="fw-bold text-success">${{ "%.2f"|format(ride.estimated_fare) }}</td>
+                                <td>
+                                    {% if ride.status == 'completed' %}
+                                        <span class="badge badge-uber-success rounded-pill px-3 py-1">Completed</span>
+                                    {% else %}
+                                        <span class="badge badge-uber-warning rounded-pill px-3 py-1">{{ ride.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('view_html_receipt', ride_id=ride.id) }}" class="btn btn-outline-light btn-sm rounded-circle me-1" title="View Web Receipt">
+                                        <i class="fa-solid fa-receipt text-info"></i>
+                                    </a>
+                                    <a href="{{ url_for('generate_invoice', ride_id=ride.id) }}" class="btn btn-outline-light btn-sm rounded-circle" title="Download PDF Receipt">
+                                        <i class="fa-solid fa-file-pdf text-warning"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-secondary py-3">No ride records yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

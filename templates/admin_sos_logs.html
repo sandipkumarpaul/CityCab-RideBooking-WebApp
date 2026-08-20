@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Emergency SOS Incident Logs{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>Emergency SOS Incidents & Dispatch Logs</h4>
+            <span class="text-secondary small">Comprehensive audit trail of passenger SOS triggers and responder rewards</span>
+        </div>
+        <span class="badge bg-danger fs-6 px-3 py-2">{{ recent_sos|length }} Incidents Logged</span>
+    </div>
+
+    <div class="uber-card p-4">
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Incident #</th>
+                        <th>Passenger Triggered</th>
+                        <th>Trip Route</th>
+                        <th>GPS Coordinates</th>
+                        <th>Responder Claimed</th>
+                        <th>Reward Bounty</th>
+                        <th>Status</th>
+                        <th class="text-end">Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sos in recent_sos %}
+                    <tr>
+                        <td class="font-monospace text-danger fw-bold">#SOS-{{ sos.id }}</td>
+                        <td>
+                            <div class="fw-semibold text-white">{{ sos.trigger_user.full_name }}</div>
+                            <div class="text-secondary extra-small">{{ sos.trigger_user.phone }}</div>
+                        </td>
+                        <td>
+                            <div class="small text-light">Trip #{{ sos.ride_id }}</div>
+                        </td>
+                        <td class="small text-light">[{{ sos.alert_lat }}, {{ sos.alert_lng }}]</td>
+                        <td>
+                            {% if sos.responder_user %}
+                                <div class="text-success fw-bold small"><i class="fa-solid fa-user-shield me-1"></i>{{ sos.responder_user.full_name }}</div>
+                            {% else %}
+                                <span class="text-secondary small">Unclaimed</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold text-success">${{ "%.2f"|format(sos.reward_amount) }}</td>
+                        <td>
+                            <span class="badge {% if sos.status == 'rewarded' %}badge-uber-success{% else %}bg-danger{% endif %} rounded-pill px-3 py-1">
+                                {{ sos.status|upper }}
+                            </span>
+                        </td>
+                        <td class="text-end text-secondary extra-small">{{ sos.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-secondary py-5">
+                            <i class="fa-solid fa-shield-check fs-1 text-success mb-3 d-block"></i>
+                            No emergency incidents on record. All systems normal!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Driver Ride Requests Queue{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-list-check me-2 text-warning"></i>Live Available Ride Requests</h4>
+            <span class="text-secondary small">Real-time incoming trip requests within your operating radius</span>
+        </div>
+        <button class="btn btn-outline-warning btn-sm rounded-pill px-3" onclick="window.location.reload()">
+            <i class="fa-solid fa-rotate me-1"></i> Refresh Queue
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="uber-card p-4">
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Passenger</th>
+                                <th>Pickup & Dropoff</th>
+                                <th>Vehicle Tier</th>
+                                <th>Estimated Payout (85%)</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ride in requested_rides %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-white">{{ ride.passenger.full_name }}</div>
+                                    <div class="text-secondary extra-small">{{ ride.passenger.phone }}</div>
+                                </td>
+                                <td>
+                                    <div class="small text-light"><i class="fa-solid fa-circle text-success me-1"></i>{{ ride.pickup_address }}</div>
+                                    <div class="small text-secondary"><i class="fa-solid fa-square text-danger me-1"></i>{{ ride.dropoff_address }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ ride.vehicle_tier }}</span>
+                                    <div class="extra-small text-secondary mt-1">{{ "%.2f"|format(ride.distance_km) }} km</div>
+                                </td>
+                                <td class="fw-bold text-success fs-6">${{ "%.2f"|format(ride.estimated_fare * 0.85) }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-warning btn-sm fw-bold rounded-pill px-4 text-dark" onclick="acceptRide('{{ ride.id }}')">
+                                        Accept Trip 🚀
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-secondary py-5">
+                                    <i class="fa-solid fa-radar fs-1 text-secondary mb-3 d-block"></i>
+                                    No incoming ride requests at this moment. You will receive an alert as soon as a passenger books a trip!
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="uber-card p-4 mb-4">
+                <h6 class="fw-bold text-white mb-3">Driver Operating Status</h6>
+                <div class="bg-black p-3 rounded-3 border border-secondary mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-secondary small">Current Status:</span>
+                        <span class="fw-bold {% if profile.is_available %}text-success{% else %}text-danger{% endif %}">
+                            {% if profile.is_available %}ONLINE & ACCEPTING{% else %}OFFLINE / ON TRIP{% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary small">Vehicle Tier:</span>
+                        <span class="badge bg-secondary">{{ profile.vehicle_tier }}</span>
+                    </div>
+                </div>
+                <button class="btn btn-outline-light w-100 rounded-pill py-2" onclick="toggleDriverAvailability()">
+                    <i class="fa-solid fa-power-off me-2"></i> Toggle Online / Offline
+                </button>
+            </div>
+
+            <div class="uber-card p-4">
+                <h6 class="fw-bold text-white mb-3">CityCab Driver Perks</h6>
+                <ul class="list-unstyled text-secondary extra-small mb-0">
+                    <li class="mb-2"><i class="fa-solid fa-circle-check text-success me-2"></i><strong>85% Guaranteed Payout</strong> on every fare completed.</li>
+                    <li class="mb-2"><i class="fa-solid fa-circle-check text-success me-2"></i><strong>Instant Wallet Credits</strong> upon trip completion.</li>
+                    <li class="mb-0"><i class="fa-solid fa-circle-check text-success me-2"></i><strong>24/7 Community Safety</strong> support with real-time GPS telemetry.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

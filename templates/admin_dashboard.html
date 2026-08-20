@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Fleet & Admin Control{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Total Gross Revenue</span>
+                <h2 class="fw-bold text-success mb-0 mt-1">${{ "%.2f"|format(total_revenue) }}</h2>
+                <span class="text-secondary extra-small">Platform transaction total</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Total Rides Processed</span>
+                <h2 class="fw-bold text-warning mb-0 mt-1">{{ total_rides }}</h2>
+                <span class="text-secondary extra-small">{{ active_rides|length }} active journeys</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Registered Fleet Drivers</span>
+                <h2 class="fw-bold text-info mb-0 mt-1">{{ total_drivers }}</h2>
+                <span class="text-secondary extra-small">Across 5 vehicle tiers</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Registered Platform Users</span>
+                <h2 class="fw-bold text-white mb-0 mt-1">{{ total_users }}</h2>
+                <span class="text-secondary extra-small">Passengers & Drivers</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="uber-card p-4 h-100">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-radar me-2 text-warning"></i>Live Fleet Active Rides Monitor</h5>
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Ride ID</th>
+                                <th>Passenger</th>
+                                <th>Driver</th>
+                                <th>Route</th>
+                                <th>Fare</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ride in active_rides %}
+                            <tr>
+                                <td class="fw-bold text-warning">#{{ ride.id }}</td>
+                                <td>{{ ride.passenger.full_name }}</td>
+                                <td>{{ ride.driver.full_name if ride.driver else 'Unassigned' }}</td>
+                                <td class="small text-secondary">{{ ride.pickup_address }} &rarr; {{ ride.dropoff_address }}</td>
+                                <td class="text-success fw-bold">${{ "%.2f"|format(ride.estimated_fare) }}</td>
+                                <td><span class="badge badge-uber-warning rounded-pill px-3 py-1">{{ ride.status }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-secondary py-4">No active trips currently in progress.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="community-sos-card h-100">
+                <h5 class="fw-bold text-danger mb-3 d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Emergency SOS Logs
+                </h5>
+                <ul class="list-group list-group-flush bg-transparent">
+                    {% for sos in recent_sos %}
+                    <li class="list-group-item bg-transparent text-light border-secondary px-0 py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong class="text-danger small">SOS Incident #{{ sos.id }}</strong>
+                            <span class="badge bg-danger rounded-pill">{{ sos.status }}</span>
+                        </div>
+                        <div class="extra-small text-white">Triggered By: {{ sos.trigger_user.full_name }}</div>
+                        <div class="extra-small text-secondary">{{ sos.created_at.strftime('%b %d, %H:%M') }}</div>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item bg-transparent text-secondary text-center py-4">No emergency incidents recorded.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="uber-card p-4 mb-4">
+        <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-id-card me-2 text-info"></i>Driver Account Approvals & Fleet Roster</h5>
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Driver Name</th>
+                        <th>Vehicle Model</th>
+                        <th>Tier</th>
+                        <th>License Plate</th>
+                        <th>Rating</th>
+                        <th>Approval Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for driver in drivers %}
+                    <tr>
+                        <td class="fw-bold text-white">{{ driver.user.full_name }}</td>
+                        <td>{{ driver.vehicle_model }}</td>
+                        <td><span class="badge bg-secondary">{{ driver.vehicle_tier }}</span></td>
+                        <td class="font-monospace text-warning">{{ driver.license_plate }}</td>
+                        <td><span class="text-warning fw-bold">★ {{ "%.1f"|format(driver.average_rating) }}</span></td>
+                        <td>
+                            {% if driver.approval_status == 'approved' %}
+                                <span class="badge badge-uber-success rounded-pill px-3 py-1">Approved</span>
+                            {% elif driver.approval_status == 'rejected' %}
+                                <span class="badge bg-danger rounded-pill px-3 py-1">Rejected</span>
+                            {% else %}
+                                <span class="badge badge-uber-warning rounded-pill px-3 py-1">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if driver.approval_status != 'approved' %}
+                                <form action="{{ url_for('admin_approve_driver', driver_id=driver.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-success btn-sm fw-bold rounded-pill px-3">Approve</button>
+                                </form>
+                            {% endif %}
+                            {% if driver.approval_status != 'rejected' %}
+                                <form action="{{ url_for('admin_reject_driver', driver_id=driver.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="return confirm('Reject driver?')">Reject</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="uber-card p-4 mb-4">
+        <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-users me-2 text-warning"></i>Platform Users & Role Management</h5>
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>User Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Wallet</th>
+                        <th>Trips</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in all_users %}
+                    <tr>
+                        <td class="fw-semibold text-white">{{ u.full_name }}</td>
+                        <td class="text-secondary small">{{ u.email }}</td>
+                        <td class="text-light small">{{ u.phone }}</td>
+                        <td>
+                            <span class="badge {% if u.role == 'admin' %}bg-danger{% elif u.role == 'driver' %}bg-info text-dark{% else %}bg-secondary{% endif %} text-uppercase">
+                                {{ u.role }}
+                            </span>
+                        </td>
+                        <td class="fw-bold text-success">${{ "%.2f"|format(u.wallet_balance) }}</td>
+                        <td class="text-light">{{ u.total_trips }}</td>
+                        <td class="text-end">
+                            {% if u.id != current_user.id %}
+                            <form action="{{ url_for('admin_delete_user', user_id=u.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle" onclick="return confirm('Delete user {{ u.full_name }}?')">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="badge bg-dark border border-secondary text-secondary">You</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

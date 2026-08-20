@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Active SOS Alerts{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-bell me-2 text-danger"></i>Active Emergency Dispatches</h4>
+            <span class="text-secondary small">Real-time incident log across Dhaka</span>
+        </div>
+        <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="window.location.reload()">
+            <i class="fa-solid fa-rotate me-1"></i> Scan Now
+        </button>
+    </div>
+
+    <div class="uber-card p-4">
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Incident ID</th>
+                        <th>Passenger In Need</th>
+                        <th>Contact Phone</th>
+                        <th>Incident Coordinates</th>
+                        <th>Reward Bounty</th>
+                        <th>Incident Status</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr>
+                        <td class="font-monospace text-danger fw-bold">#SOS-{{ alert.id }}</td>
+                        <td class="fw-semibold text-white">{{ alert.trigger_user.full_name }}</td>
+                        <td class="text-secondary small">{{ alert.trigger_user.phone }}</td>
+                        <td class="text-light small">
+                            <i class="fa-solid fa-location-dot text-danger me-1"></i> {{ alert.alert_lat }}, {{ alert.alert_lng }}
+                        </td>
+                        <td class="fw-bold text-success fs-6">${{ "%.2f"|format(alert.reward_amount) }}</td>
+                        <td>
+                            <span class="badge bg-danger rounded-pill px-3 py-1">{{ alert.status|upper }}</span>
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-success btn-sm fw-bold rounded-pill px-4 text-dark shadow" onclick="respondToSOS('{{ alert.id }}')">
+                                Respond & Verify
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-secondary py-5">
+                            <i class="fa-solid fa-shield-halved fs-1 text-success mb-3 d-block"></i>
+                            All zones clear! No active SOS alerts in your sector.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

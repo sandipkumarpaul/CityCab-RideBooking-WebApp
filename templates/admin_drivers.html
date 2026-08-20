@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Driver Approvals & Fleet Roster{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-white mb-0"><i class="fa-solid fa-id-card me-2 text-info"></i>Driver Fleet Management & Approvals</h4>
+            <span class="text-secondary small">Verify credentials, vehicle tiers, and approve driver registrations</span>
+        </div>
+        <span class="badge bg-info text-dark fs-6 px-3 py-2">{{ drivers|length }} Registered Drivers</span>
+    </div>
+
+    <div class="uber-card p-4">
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Driver</th>
+                        <th>Email & Phone</th>
+                        <th>Vehicle Model</th>
+                        <th>Tier</th>
+                        <th>License Plate</th>
+                        <th>Rating</th>
+                        <th>Approval</th>
+                        <th>Availability</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for driver in drivers %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-white">{{ driver.user.full_name }}</div>
+                            <div class="text-secondary extra-small">ID #{{ driver.id }}</div>
+                        </td>
+                        <td>
+                            <div class="small text-light">{{ driver.user.email }}</div>
+                            <div class="extra-small text-secondary">{{ driver.user.phone }}</div>
+                        </td>
+                        <td>{{ driver.vehicle_model }}</td>
+                        <td><span class="badge bg-secondary">{{ driver.vehicle_tier }}</span></td>
+                        <td class="font-monospace text-warning">{{ driver.license_plate }}</td>
+                        <td><span class="text-warning fw-bold">★ {{ "%.1f"|format(driver.average_rating) }}</span></td>
+                        <td>
+                            {% if driver.approval_status == 'approved' %}
+                                <span class="badge badge-uber-success rounded-pill px-3 py-1">Approved</span>
+                            {% elif driver.approval_status == 'rejected' %}
+                                <span class="badge bg-danger rounded-pill px-3 py-1">Rejected</span>
+                            {% else %}
+                                <span class="badge badge-uber-warning rounded-pill px-3 py-1">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if driver.is_available %}
+                                <span class="text-success small"><i class="fa-solid fa-circle me-1"></i>Online</span>
+                            {% else %}
+                                <span class="text-secondary small"><i class="fa-solid fa-circle me-1"></i>Offline</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if driver.approval_status != 'approved' %}
+                                <form action="{{ url_for('admin_approve_driver', driver_id=driver.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-success btn-sm fw-bold rounded-pill px-3">Approve</button>
+                                </form>
+                            {% endif %}
+                            {% if driver.approval_status != 'rejected' %}
+                                <form action="{{ url_for('admin_reject_driver', driver_id=driver.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="return confirm('Reject driver registration?')">Reject</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

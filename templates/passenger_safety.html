@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Passenger Safety & Emergency SOS Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="community-sos-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold text-danger mb-0 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Emergency SOS Center
+                    </h4>
+                    <span class="badge bg-danger rounded-pill px-3 py-2">LIVE 24/7</span>
+                </div>
+                <p class="text-light small mb-4">
+                    In the event of an emergency during any trip, triggering SOS instantly notifies your trusted contacts via simulated SMS and alerts verified community responders within your geographic vicinity.
+                </p>
+
+                {% if active_ride %}
+                    <div class="bg-black p-3 rounded-3 border border-danger mb-4">
+                        <span class="text-danger extra-small text-uppercase fw-bold">Active Trip Connected:</span>
+                        <div class="text-white fw-bold mt-1">{{ active_ride.pickup_address }} &rarr; {{ active_ride.dropoff_address }}</div>
+                        <div class="text-secondary small">Driver: {{ active_ride.driver.full_name if active_ride.driver else 'Searching...' }}</div>
+                    </div>
+                    <button type="button" class="sos-btn-uber py-3 fs-5" onclick="triggerEmergencySOS('{{ active_ride.id }}')">
+                        🚨 TRIGGER LIVE EMERGENCY SOS 🚨
+                    </button>
+                {% else %}
+                    <div class="bg-black p-4 rounded-3 border border-secondary text-center mb-3">
+                        <i class="fa-solid fa-shield-check text-success fs-1 mb-2 d-block"></i>
+                        <h6 class="text-white fw-bold mb-1">No Active Journey Right Now</h6>
+                        <span class="text-secondary small">When you start a trip, the one-tap SOS trigger will activate here.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="uber-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-user-shield me-2 text-warning"></i>Trusted Emergency Contacts</h5>
+                    <span class="badge bg-secondary rounded-pill">{{ contacts|length }} Added</span>
+                </div>
+                <p class="text-secondary small mb-3">
+                    Add family members, trusted friends, or campus security numbers below.
+                </p>
+
+                <form action="{{ url_for('add_trusted_contact') }}" method="POST" class="row g-2 mb-4 bg-black p-3 rounded-3 border border-secondary">
+                    <div class="col-md-5">
+                        <input type="text" name="contact_name" class="form-control uber-input form-control-sm ps-3" placeholder="Contact Name (e.g. Spouse)" required>
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" name="contact_phone" class="form-control uber-input form-control-sm ps-3" placeholder="Phone (+88017...)" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold rounded-pill py-2 text-dark">+ Add</button>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table table-uber align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Contact Name</th>
+                                <th>Phone</th>
+                                <th class="text-end">Remove</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contact in contacts %}
+                            <tr>
+                                <td class="fw-semibold text-warning"><i class="fa-solid fa-phone-volume me-2"></i>{{ contact.contact_name }}</td>
+                                <td class="text-light">{{ contact.contact_phone }}</td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('delete_trusted_contact', contact_id=contact.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle" onclick="return confirm('Delete contact?')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center text-secondary py-3">No trusted contacts added yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="uber-card p-4">
+        <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-shield-halved me-2 text-info"></i>CityCab 4-Layer Safety Architecture</h5>
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="bg-black p-3 rounded-3 border border-secondary h-100">
+                    <span class="fs-2 text-warning mb-2 d-block">🪪</span>
+                    <h6 class="text-white fw-bold">Verified Drivers</h6>
+                    <p class="text-secondary extra-small mb-0">Every driver profile undergoes manual admin identity verification and license plate checks before approval.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="bg-black p-3 rounded-3 border border-secondary h-100">
+                    <span class="fs-2 text-success mb-2 d-block">📍</span>
+                    <h6 class="text-white fw-bold">Live GPS Telemetry</h6>
+                    <p class="text-secondary extra-small mb-0">Real-time driver location tracking along exact road paths from pickup to destination.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="bg-black p-3 rounded-3 border border-secondary h-100">
+                    <span class="fs-2 text-danger mb-2 d-block">🚨</span>
+                    <h6 class="text-white fw-bold">Community SOS Dispatch</h6>
+                    <p class="text-secondary extra-small mb-0">Proximity-verified community responders within &ge; 1 km receive urgent dispatch alerts with wallet rewards.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="bg-black p-3 rounded-3 border border-secondary h-100">
+                    <span class="fs-2 text-info mb-2 d-block">🔒</span>
+                    <h6 class="text-white fw-bold">Secure Gateways</h6>
+                    <p class="text-secondary extra-small mb-0">End-to-end sandbox payments via bKash, Nagad, and PCI-compliant debit card processing.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

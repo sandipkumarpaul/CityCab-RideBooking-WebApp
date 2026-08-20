@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Driver Earnings & Payouts{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Total Net Earnings (85%)</span>
+                <h2 class="fw-bold text-success mb-0 mt-1">${{ "%.2f"|format(total_earnings * 0.85) }}</h2>
+                <span class="text-secondary extra-small">Direct wallet payouts</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Trips Completed</span>
+                <h2 class="fw-bold text-warning mb-0 mt-1">{{ completed_rides|length }}</h2>
+                <span class="text-secondary extra-small">Lifetime passenger journeys</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Wallet Balance</span>
+                <h2 class="fw-bold text-info mb-0 mt-1">${{ "%.2f"|format(current_user.wallet_balance) }}</h2>
+                <span class="text-secondary extra-small">Ready for withdrawal</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Average Rating</span>
+                <h2 class="fw-bold text-white mb-0 mt-1">★ {{ "%.1f"|format(profile.average_rating) }}</h2>
+                <span class="text-secondary extra-small">{{ profile.rating_count }} reviews</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="uber-card p-4">
+        <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-money-bill-trend-up me-2 text-success"></i>Completed Trips Earnings Ledger</h5>
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Trip #</th>
+                        <th>Passenger</th>
+                        <th>Route</th>
+                        <th>Distance</th>
+                        <th>Total Fare</th>
+                        <th>Platform Fee (15%)</th>
+                        <th class="text-end">Driver Payout (85%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ride in completed_rides %}
+                    <tr>
+                        <td class="font-monospace text-warning">#{{ ride.id }}</td>
+                        <td>
+                            <div class="fw-semibold text-white small">{{ ride.passenger.full_name }}</div>
+                            <div class="text-secondary extra-small">{{ ride.created_at.strftime('%b %d, %Y %H:%M') }}</div>
+                        </td>
+                        <td>
+                            <div class="small text-light">{{ ride.pickup_address }}</div>
+                            <div class="small text-secondary">&darr; {{ ride.dropoff_address }}</div>
+                        </td>
+                        <td class="text-light small">{{ "%.2f"|format(ride.distance_km) }} km</td>
+                        <td class="text-white">${{ "%.2f"|format(ride.estimated_fare) }}</td>
+                        <td class="text-secondary extra-small">-${{ "%.2f"|format(ride.estimated_fare * 0.15) }}</td>
+                        <td class="fw-bold text-success text-end fs-6">+${{ "%.2f"|format(ride.estimated_fare * 0.85) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-secondary py-5">
+                            <i class="fa-solid fa-receipt fs-1 text-secondary mb-3 d-block"></i>
+                            No completed rides ledger yet. Accept incoming requests to start earning!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

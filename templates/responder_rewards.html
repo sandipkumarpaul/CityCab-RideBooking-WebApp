@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}CityCab - Community Hero Rewards{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Total Bounty Rewards Earned</span>
+                <h2 class="fw-bold text-success mb-0 mt-1">${{ "%.2f"|format(current_user.total_rescue_rewards) }}</h2>
+                <span class="text-secondary extra-small">Direct wallet additions</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Verified Rescues</span>
+                <h2 class="fw-bold text-warning mb-0 mt-1">{{ current_user.total_rescues }}</h2>
+                <span class="text-secondary extra-small">Proximity-verified spots</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="uber-card p-4">
+                <span class="text-secondary extra-small text-uppercase fw-bold">Hero Tier Rank</span>
+                <h2 class="fw-bold text-info mb-0 mt-1">
+                    {% if current_user.total_rescues >= 5 %}🥇 Gold Guardian
+                    {% elif current_user.total_rescues >= 1 %}🥈 Silver Responder
+                    {% else %}🥉 Rookie Volunteer{% endif %}
+                </h2>
+                <span class="text-secondary extra-small">Community safety ranking</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="uber-card p-4">
+        <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-award me-2 text-success"></i>Verified Rescue Rewards History</h5>
+        <div class="table-responsive">
+            <table class="table table-uber align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Incident #</th>
+                        <th>Passenger Helped</th>
+                        <th>Location Coordinates</th>
+                        <th>Reward Credited</th>
+                        <th>Status</th>
+                        <th class="text-end">Verification Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in responded_alerts %}
+                    <tr>
+                        <td class="font-monospace text-danger fw-bold">#SOS-{{ r.id }}</td>
+                        <td class="fw-semibold text-white">{{ r.trigger_user.full_name }}</td>
+                        <td class="text-light small">[{{ r.alert_lat }}, {{ r.alert_lng }}]</td>
+                        <td class="fw-bold text-success fs-6">+${{ "%.2f"|format(r.reward_amount) }}</td>
+                        <td>
+                            <span class="badge badge-uber-success rounded-pill px-3 py-1">Rewarded</span>
+                        </td>
+                        <td class="text-end text-secondary extra-small">{{ r.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-secondary py-5">
+                            <i class="fa-solid fa-gift fs-1 text-secondary mb-3 d-block"></i>
+                            No rescue rewards earned yet. Respond to active emergency alerts to earn rewards!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
