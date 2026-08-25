@@ -1,0 +1,66 @@
+============================================================
+           AI USAGE DECLARATION
+============================================================
+
+Name: Sandip Kumar Paul
+Student ID: 24241311
+Assignment: CSE391 Project – Real-Time Taxi & Ride-Booking Web Application (CityCab)
+Date: August 24, 2026
+
+------------------------------------------------------------
+1. AI TOOLS USED (check all that apply)
+------------------------------------------------------------
+[ ] None
+[X] ChatGPT
+[ ] GitHub Copilot
+[X] Google Gemini
+[ ] Claude
+[ ] Cursor
+[ ] Other: ________________
+
+------------------------------------------------------------
+2. PURPOSE OF AI USE (check all that apply)
+------------------------------------------------------------
+[X] Learning/understanding concepts
+[X] Debugging my code
+[ ] Generating code snippets
+[ ] Writing text content
+[ ] Design/styling ideas
+[ ] Image generation
+[ ] Other: ________________
+
+------------------------------------------------------------
+3. DESCRIPTION OF AI USE
+------------------------------------------------------------
+Briefly describe what you used AI for and how:
+
+AI was used solely as a debugging assistant and conceptual reference during local testing and development. 
+Specifically, AI helped identify and resolve minor runtime exceptions (such as SQLite database session loader edge cases, Windows PowerShell path formatting during local execution, and Leaflet marker boundary handling). 
+
+All original project ideas, architectural design, database relational schemas, backend business logic, payment simulator flows, frontend mapping integrations, and deployment executions were entirely conceived, authored, and implemented by Sandip Kumar Paul.
+
+------------------------------------------------------------
+4. AI-ASSISTED SECTIONS
+------------------------------------------------------------
+List specific files/sections where AI helped significantly:
+
+File: app.py                 Section: Debugging database session initialization & user_loader exception handling
+File: static/js/main.js      Section: Troubleshooting Leaflet map route boundary fitting & GPS error handling
+File: seed.py                Section: Debugging mock relational database commit sequence
+
+------------------------------------------------------------
+5. DECLARATION
+------------------------------------------------------------
+I declare that:
+- This disclosure is complete and accurate
+- I understand all code in my submission
+- I can explain and modify my work if asked
+- I take full responsibility for my submission
+
+Signature: Sandip Kumar Paul
+Date: August 24, 2026
+
+============================================================
+Save as: docs/AI_Declaration.txt
+============================================================
+
