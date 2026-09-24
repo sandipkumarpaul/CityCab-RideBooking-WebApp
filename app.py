@@ -1,14 +1,20 @@
 import os
 import math
 from datetime import datetime
+from functools import wraps
 from io import BytesIO
 
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, DriverProfile, TrustedContact, Ride, Payment, Review, SOSAlert
+from seed import seed_database
+
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'citycab-secret-key-2026')
+# The fallback key is for local development only; set SECRET_KEY in production.
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'citycab-dev-secret-key')
 
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///citycab.db')
 if db_url.startswith("postgres://"):
@@ -18,14 +24,17 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+def init_database():
+    """Create tables and load the demo dataset the first time the app starts."""
+    db.create_all()
+    if os.environ.get('CITYCAB_AUTO_SEED', '1') == '1' and User.query.count() == 0:
+        seed_database()
+
 with app.app_context():
     try:
-        db.create_all()
-        if User.query.count() == 0:
-            from seed import seed_database
-            seed_database()
+        init_database()
     except Exception:
-        pass
+        app.logger.exception('Database initialisation failed')
 
 login_manager = LoginManager()
 login_manager.login_view = 'login'
@@ -37,6 +46,31 @@ def load_user(user_id):
     try:
         return db.session.get(User, int(user_id))
     except Exception:
+        return None
+
+def role_required(*roles):
+    """Restrict a view to the given user roles, redirecting everyone else home."""
+    def decorator(view):
+        @wraps(view)
+        @login_required
+        def wrapped(*args, **kwargs):
+            if current_user.role not in roles:
+                flash('Access restricted to authorised accounts only.', 'warning')
+                return redirect(url_for('index'))
+            return view(*args, **kwargs)
+        return wrapped
+    return decorator
+
+def can_access_ride(ride):
+    return current_user.role == 'admin' or current_user.id in (ride.passenger_id, ride.driver_id)
+
+def ride_forbidden():
+    return jsonify({'status': 'error', 'message': 'You do not have access to this ride'}), 403
+
+def get_ride_from_payload(data):
+    try:
+        return db.session.get(Ride, int(data.get('ride_id')))
+    except (TypeError, ValueError):
         return None
 
 def calculate_haversine(lat1, lon1, lat2, lon2):
@@ -124,6 +158,26 @@ def estimate_fare_amount(distance_km, tier):
     res = calculate_industry_fare(distance_km, tier)
     return res['final_fare']
 
+VEHICLE_TIERS = list(INDUSTRY_TIER_CONFIG)
+SELF_REGISTER_ROLES = ('passenger', 'driver', 'responder')
+PAYMENT_METHODS = ('bkash', 'nagad', 'card', 'wallet')
+MAX_TOPUP_AMOUNT = 1000.0
+MIN_PASSWORD_LENGTH = 4
+SOS_REWARD_AMOUNT = 10.0
+SOS_MIN_RESPONDER_DISTANCE_KM = 1.0
+
+def parse_route_coordinates(data):
+    """Read pickup/dropoff coordinates from a JSON body, defaulting to the demo route in Dhaka."""
+    coords = (
+        float(data.get('pickup_lat', 23.7937)),
+        float(data.get('pickup_lng', 90.4066)),
+        float(data.get('dropoff_lat', 23.7771)),
+        float(data.get('dropoff_lng', 90.4043)),
+    )
+    if not all(math.isfinite(c) for c in coords):
+        raise ValueError('Coordinates must be finite numbers')
+    return coords
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -167,6 +221,18 @@ def register():
         password = request.form.get('password', '')
         role = request.form.get('role', 'passenger')
 
+        if role not in SELF_REGISTER_ROLES:
+            flash('Please choose a valid account type.', 'danger')
+            return render_template('register.html')
+
+        if not (full_name and email and phone):
+            flash('Name, email and phone number are required.', 'danger')
+            return render_template('register.html')
+
+        if len(password) < MIN_PASSWORD_LENGTH:
+            flash(f'Password must be at least {MIN_PASSWORD_LENGTH} characters.', 'danger')
+            return render_template('register.html')
+
         existing = User.query.filter_by(email=email).first()
         if existing:
             flash('An account with this email already exists.', 'danger')
@@ -178,9 +244,11 @@ def register():
         db.session.commit()
 
         if role == 'driver':
-            vehicle_model = request.form.get('vehicle_model', 'Toyota Axio')
+            vehicle_model = request.form.get('vehicle_model', '').strip() or 'Toyota Axio'
             vehicle_tier = request.form.get('vehicle_tier', 'Comfort')
-            license_plate = request.form.get('license_plate', 'DKA-12-3456')
+            if vehicle_tier not in VEHICLE_TIERS:
+                vehicle_tier = 'Comfort'
+            license_plate = request.form.get('license_plate', '').strip() or 'DKA-12-3456'
             driver_prof = DriverProfile(
                 user_id=user.id,
                 vehicle_model=vehicle_model,
@@ -214,8 +282,8 @@ def logout():
 @login_required
 def profile():
     if request.method == 'POST':
-        current_user.full_name = request.form.get('full_name', current_user.full_name)
-        current_user.phone = request.form.get('phone', current_user.phone)
+        current_user.full_name = request.form.get('full_name', '').strip() or current_user.full_name
+        current_user.phone = request.form.get('phone', '').strip() or current_user.phone
         db.session.commit()
         flash('Profile updated successfully.', 'success')
 
@@ -234,8 +302,8 @@ def change_password():
         flash('Current password is incorrect.', 'danger')
         return redirect(url_for('profile'))
 
-    if len(new_password) < 4:
-        flash('New password must be at least 4 characters.', 'danger')
+    if len(new_password) < MIN_PASSWORD_LENGTH:
+        flash(f'New password must be at least {MIN_PASSWORD_LENGTH} characters.', 'danger')
         return redirect(url_for('profile'))
 
     if new_password != confirm_password:
@@ -275,7 +343,9 @@ def topup_wallet():
     try:
         amount = float(request.form.get('amount', 0))
         payment_method = request.form.get('payment_method', 'card').lower()
-        if amount > 0:
+        if not math.isfinite(amount) or amount > MAX_TOPUP_AMOUNT:
+            flash(f'Top-up amount must be between $1 and ${MAX_TOPUP_AMOUNT:.0f}.', 'warning')
+        elif amount > 0:
             current_user.wallet_balance += amount
             db.session.commit()
             prefix = "BKASH" if payment_method == 'bkash' else ("NAGAD" if payment_method == 'nagad' else "CARD")
@@ -330,12 +400,8 @@ def passenger_wallet():
     return render_template('passenger_wallet.html', payments=payments)
 
 @app.route('/driver/dashboard')
-@login_required
+@role_required('driver', 'admin')
 def driver_dashboard():
-    if current_user.role != 'driver' and current_user.role != 'admin':
-        flash('Access restricted to drivers.', 'warning')
-        return redirect(url_for('index'))
-
     profile = DriverProfile.query.filter_by(user_id=current_user.id).first()
     requested_rides = Ride.query.filter_by(status='requested').order_by(Ride.created_at.desc()).all()
     active_ride = Ride.query.filter(
@@ -355,35 +421,23 @@ def driver_dashboard():
                            reviews=reviews_received)
 
 @app.route('/driver/requests')
-@login_required
+@role_required('driver', 'admin')
 def driver_requests():
-    if current_user.role != 'driver' and current_user.role != 'admin':
-        flash('Access restricted to drivers.', 'warning')
-        return redirect(url_for('index'))
-
     profile = DriverProfile.query.filter_by(user_id=current_user.id).first()
     requested_rides = Ride.query.filter_by(status='requested').order_by(Ride.created_at.desc()).all()
     return render_template('driver_requests.html', profile=profile, requested_rides=requested_rides)
 
 @app.route('/driver/earnings')
-@login_required
+@role_required('driver', 'admin')
 def driver_earnings():
-    if current_user.role != 'driver' and current_user.role != 'admin':
-        flash('Access restricted to drivers.', 'warning')
-        return redirect(url_for('index'))
-
     profile = DriverProfile.query.filter_by(user_id=current_user.id).first()
     completed_rides = Ride.query.filter_by(driver_id=current_user.id, status='completed').order_by(Ride.created_at.desc()).all()
     total_earnings = sum(r.estimated_fare for r in completed_rides)
     return render_template('driver_earnings.html', profile=profile, completed_rides=completed_rides, total_earnings=total_earnings)
 
 @app.route('/driver/reviews')
-@login_required
+@role_required('driver', 'admin')
 def driver_reviews():
-    if current_user.role != 'driver' and current_user.role != 'admin':
-        flash('Access restricted to drivers.', 'warning')
-        return redirect(url_for('index'))
-
     profile = DriverProfile.query.filter_by(user_id=current_user.id).first()
     reviews_received = Review.query.filter_by(driver_id=current_user.id).order_by(Review.created_at.desc()).all()
     return render_template('driver_reviews.html', profile=profile, reviews=reviews_received)
@@ -407,12 +461,8 @@ def responder_rewards():
     return render_template('responder_rewards.html', responded_alerts=responded_alerts)
 
 @app.route('/admin/dashboard')
-@login_required
+@role_required('admin')
 def admin_dashboard():
-    if current_user.role != 'admin':
-        flash('Access restricted to System Administrators.', 'danger')
-        return redirect(url_for('index'))
-
     total_users = User.query.count()
     total_drivers = DriverProfile.query.count()
     total_rides = Ride.query.count()
@@ -438,58 +488,40 @@ def admin_dashboard():
                            reviews=recent_reviews)
 
 @app.route('/admin/drivers')
-@login_required
+@role_required('admin')
 def admin_drivers():
-    if current_user.role != 'admin':
-        flash('Access restricted to System Administrators.', 'danger')
-        return redirect(url_for('index'))
     drivers = DriverProfile.query.all()
     return render_template('admin_drivers.html', drivers=drivers)
 
 @app.route('/admin/responders')
-@login_required
+@role_required('admin')
 def admin_responders():
-    if current_user.role != 'admin':
-        flash('Access restricted to System Administrators.', 'danger')
-        return redirect(url_for('index'))
     responders = User.query.filter_by(role='responder').order_by(User.created_at.desc()).all()
     total_rescues = sum(r.total_rescues for r in responders)
     total_rewards_paid = sum(r.total_rescue_rewards for r in responders)
     return render_template('admin_responders.html', responders=responders, total_rescues=total_rescues, total_rewards_paid=total_rewards_paid)
 
 @app.route('/admin/users')
-@login_required
+@role_required('admin')
 def admin_users():
-    if current_user.role != 'admin':
-        flash('Access restricted to System Administrators.', 'danger')
-        return redirect(url_for('index'))
     all_users = User.query.order_by(User.created_at.desc()).all()
     return render_template('admin_users.html', all_users=all_users)
 
 @app.route('/admin/rides')
-@login_required
+@role_required('admin')
 def admin_rides():
-    if current_user.role != 'admin':
-        flash('Access restricted to System Administrators.', 'danger')
-        return redirect(url_for('index'))
     all_rides = Ride.query.order_by(Ride.created_at.desc()).all()
     return render_template('admin_rides.html', all_rides=all_rides)
 
 @app.route('/admin/sos-logs')
-@login_required
+@role_required('admin')
 def admin_sos_logs():
-    if current_user.role != 'admin':
-        flash('Access restricted to System Administrators.', 'danger')
-        return redirect(url_for('index'))
     recent_sos = SOSAlert.query.order_by(SOSAlert.created_at.desc()).all()
     return render_template('admin_sos_logs.html', recent_sos=recent_sos)
 
 @app.route('/admin/driver/approve/<int:driver_id>', methods=['POST'])
-@login_required
+@role_required('admin')
 def admin_approve_driver(driver_id):
-    if current_user.role != 'admin':
-        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
-
     profile = db.session.get(DriverProfile, driver_id)
     if profile:
         profile.approval_status = 'approved'
@@ -498,11 +530,8 @@ def admin_approve_driver(driver_id):
     return redirect(request.referrer or url_for('admin_dashboard'))
 
 @app.route('/admin/driver/reject/<int:driver_id>', methods=['POST'])
-@login_required
+@role_required('admin')
 def admin_reject_driver(driver_id):
-    if current_user.role != 'admin':
-        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
-
     profile = db.session.get(DriverProfile, driver_id)
     if profile:
         profile.approval_status = 'rejected'
@@ -511,17 +540,19 @@ def admin_reject_driver(driver_id):
     return redirect(request.referrer or url_for('admin_dashboard'))
 
 @app.route('/admin/user/delete/<int:user_id>', methods=['POST'])
-@login_required
+@role_required('admin')
 def admin_delete_user(user_id):
-    if current_user.role != 'admin':
-        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
-
     if user_id == current_user.id:
         flash('You cannot delete your own admin account.', 'danger')
         return redirect(request.referrer or url_for('admin_dashboard'))
 
     user = db.session.get(User, user_id)
-    if user:
+    if user and (user.passenger_rides or user.driver_rides or user.reviews_given
+                 or user.alerts_triggered or user.alerts_responded):
+        # Rides, reviews and SOS logs reference users by non-nullable foreign keys,
+        # so accounts with history are kept for audit purposes.
+        flash(f'{user.full_name} has trip or SOS history and cannot be deleted.', 'warning')
+    elif user:
         db.session.delete(user)
         db.session.commit()
         flash(f'User {user.full_name} removed from platform.', 'info')
@@ -530,17 +561,17 @@ def admin_delete_user(user_id):
 @app.route('/api/estimate_fare', methods=['POST'])
 @login_required
 def api_estimate_fare():
-    data = request.json or {}
-    pickup_lat = float(data.get('pickup_lat', 23.7937))
-    pickup_lng = float(data.get('pickup_lng', 90.4066))
-    dropoff_lat = float(data.get('dropoff_lat', 23.7771))
-    dropoff_lng = float(data.get('dropoff_lng', 90.4043))
+    data = request.get_json(silent=True) or {}
+    try:
+        pickup_lat, pickup_lng, dropoff_lat, dropoff_lng = parse_route_coordinates(data)
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'message': 'Invalid pickup or dropoff coordinates'}), 400
 
     distance = calculate_haversine(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng)
 
     estimates = {}
     detailed_breakdowns = {}
-    for tier in ['Bike', 'CNG', 'Economy', 'Comfort', 'Premium']:
+    for tier in VEHICLE_TIERS:
         res = calculate_industry_fare(distance, tier)
         estimates[tier] = res['final_fare']
         detailed_breakdowns[tier] = res
@@ -555,14 +586,16 @@ def api_estimate_fare():
 @app.route('/api/request_ride', methods=['POST'])
 @login_required
 def api_request_ride():
-    data = request.json or {}
-    pickup_address = data.get('pickup_address', 'Banani Road 11')
-    dropoff_address = data.get('dropoff_address', 'BRAC University, Mohakhali')
-    pickup_lat = float(data.get('pickup_lat', 23.7937))
-    pickup_lng = float(data.get('pickup_lng', 90.4066))
-    dropoff_lat = float(data.get('dropoff_lat', 23.7771))
-    dropoff_lng = float(data.get('dropoff_lng', 90.4043))
+    data = request.get_json(silent=True) or {}
+    pickup_address = str(data.get('pickup_address') or 'Banani Road 11')[:255]
+    dropoff_address = str(data.get('dropoff_address') or 'BRAC University, Mohakhali')[:255]
     vehicle_tier = data.get('vehicle_tier', 'Comfort')
+    if vehicle_tier not in VEHICLE_TIERS:
+        return jsonify({'status': 'error', 'message': 'Unknown vehicle tier'}), 400
+    try:
+        pickup_lat, pickup_lng, dropoff_lat, dropoff_lng = parse_route_coordinates(data)
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'message': 'Invalid pickup or dropoff coordinates'}), 400
 
     distance_km = calculate_haversine(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng)
     fare = estimate_fare_amount(distance_km, vehicle_tier)
@@ -610,6 +643,8 @@ def api_get_ride(ride_id):
     ride = db.session.get(Ride, ride_id)
     if not ride:
         return jsonify({'status': 'error', 'message': 'Ride not found'}), 404
+    if not can_access_ride(ride):
+        return ride_forbidden()
     return jsonify({'status': 'success', 'ride': ride.to_dict()})
 
 @app.route('/api/ride/<int:ride_id>/status', methods=['POST'])
@@ -618,8 +653,12 @@ def api_update_ride_status(ride_id):
     ride = db.session.get(Ride, ride_id)
     if not ride:
         return jsonify({'status': 'error', 'message': 'Ride not found'}), 404
+    if not can_access_ride(ride):
+        return ride_forbidden()
+    if ride.status in ('completed', 'cancelled'):
+        return jsonify({'status': 'error', 'message': f'Ride is already {ride.status}'}), 400
 
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     new_status = data.get('status')
     if new_status in ['accepted', 'en_route', 'completed', 'cancelled']:
         ride.status = new_status
@@ -644,15 +683,17 @@ def api_driver_toggle_availability():
 @app.route('/api/driver/accept_ride/<int:ride_id>', methods=['POST'])
 @login_required
 def api_driver_accept_ride(ride_id):
+    profile = DriverProfile.query.filter_by(user_id=current_user.id).first()
+    if current_user.role != 'driver' or not profile or profile.approval_status != 'approved':
+        return jsonify({'status': 'error', 'message': 'Only approved drivers can accept rides'}), 403
+
     ride = db.session.get(Ride, ride_id)
     if not ride or ride.status != 'requested':
         return jsonify({'status': 'error', 'message': 'Ride is no longer available'}), 400
 
     ride.driver_id = current_user.id
     ride.status = 'accepted'
-    profile = DriverProfile.query.filter_by(user_id=current_user.id).first()
-    if profile:
-        profile.is_available = False
+    profile.is_available = False
     db.session.commit()
 
     return jsonify({'status': 'success', 'ride': ride.to_dict()})
@@ -660,13 +701,16 @@ def api_driver_accept_ride(ride_id):
 @app.route('/api/pay_ride', methods=['POST'])
 @login_required
 def api_pay_ride():
-    data = request.json or {}
-    ride_id = data.get('ride_id')
-    payment_method = data.get('payment_method', 'card').lower()
+    data = request.get_json(silent=True) or {}
+    payment_method = str(data.get('payment_method', 'card')).lower()
+    if payment_method not in PAYMENT_METHODS:
+        return jsonify({'status': 'error', 'message': 'Unsupported payment method'}), 400
 
-    ride = db.session.get(Ride, ride_id)
+    ride = get_ride_from_payload(data)
     if not ride:
         return jsonify({'status': 'error', 'message': 'Ride not found'}), 404
+    if ride.passenger_id != current_user.id:
+        return ride_forbidden()
 
     if ride.payment_status == 'paid':
         return jsonify({'status': 'error', 'message': 'Ride is already paid'}), 400
@@ -676,8 +720,7 @@ def api_pay_ride():
             return jsonify({'status': 'error', 'message': 'Insufficient wallet balance. Please top up your wallet.'}), 400
         current_user.wallet_balance -= ride.estimated_fare
 
-    prefix = "BKASH" if payment_method == 'bkash' else ("NAGAD" if payment_method == 'nagad' else ("CARD" if payment_method == 'card' else "WALLET"))
-    txn_ref = f"TXN-{prefix}-{int(datetime.utcnow().timestamp())}"
+    txn_ref = f"TXN-{payment_method.upper()}-{int(datetime.utcnow().timestamp())}"
 
     payment = Payment(
         ride_id=ride.id,
@@ -688,6 +731,7 @@ def api_pay_ride():
     )
     ride.payment_status = 'paid'
 
+    # Drivers receive 85% of the fare; the remaining 15% is the platform commission.
     if ride.driver_id:
         driver_user = db.session.get(User, ride.driver_id)
         if driver_user:
@@ -706,17 +750,26 @@ def api_pay_ride():
 @app.route('/api/submit_review', methods=['POST'])
 @login_required
 def api_submit_review():
-    data = request.json or {}
-    ride_id = data.get('ride_id')
-    rating = int(data.get('rating', 5))
-    comment = data.get('comment', '').strip()
+    data = request.get_json(silent=True) or {}
+    try:
+        rating = int(data.get('rating', 5))
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'message': 'Rating must be a number from 1 to 5'}), 400
+    if not 1 <= rating <= 5:
+        return jsonify({'status': 'error', 'message': 'Rating must be a number from 1 to 5'}), 400
+    comment = str(data.get('comment') or '').strip()
 
-    ride = db.session.get(Ride, ride_id)
+    ride = get_ride_from_payload(data)
     if not ride:
         return jsonify({'status': 'error', 'message': 'Ride not found'}), 404
+    if ride.passenger_id != current_user.id:
+        return ride_forbidden()
 
     if not ride.driver_id:
         return jsonify({'status': 'error', 'message': 'No driver assigned to this ride'}), 400
+
+    if Review.query.filter_by(ride_id=ride.id).first():
+        return jsonify({'status': 'error', 'message': 'You have already reviewed this ride'}), 400
 
     review = Review(
         ride_id=ride.id,
@@ -733,14 +786,18 @@ def api_submit_review():
 @app.route('/api/trigger_sos', methods=['POST'])
 @login_required
 def api_trigger_sos():
-    data = request.json or {}
-    ride_id = data.get('ride_id')
-    ride = db.session.get(Ride, ride_id)
+    data = request.get_json(silent=True) or {}
+    ride = get_ride_from_payload(data)
     if not ride:
         return jsonify({'status': 'error', 'message': 'Ride not found'}), 404
+    if not can_access_ride(ride):
+        return ride_forbidden()
 
-    alert_lat = float(data.get('alert_lat', ride.pickup_lat))
-    alert_lng = float(data.get('alert_lng', ride.pickup_lng))
+    try:
+        alert_lat = float(data.get('alert_lat', ride.pickup_lat))
+        alert_lng = float(data.get('alert_lng', ride.pickup_lng))
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'message': 'Invalid alert coordinates'}), 400
 
     existing_alert = SOSAlert.query.filter_by(ride_id=ride.id, status='active').first()
     if not existing_alert:
@@ -750,7 +807,7 @@ def api_trigger_sos():
             alert_lat=alert_lat,
             alert_lng=alert_lng,
             status='active',
-            reward_amount=10.00
+            reward_amount=SOS_REWARD_AMOUNT
         )
         db.session.add(existing_alert)
         db.session.commit()
@@ -767,12 +824,12 @@ def api_active_sos_alerts():
     alerts = SOSAlert.query.filter_by(status='active').all()
     result = []
 
-    user_lat = float(request.args.get('lat', 23.7771))
-    user_lng = float(request.args.get('lng', 90.4043))
+    user_lat = request.args.get('lat', 23.7771, type=float)
+    user_lng = request.args.get('lng', 90.4043, type=float)
 
     for alert in alerts:
         distance = calculate_haversine(user_lat, user_lng, alert.alert_lat, alert.alert_lng)
-        is_eligible_for_reward = (alert.triggered_by != current_user.id) and (distance >= 1.0)
+        is_eligible_for_reward = (alert.triggered_by != current_user.id) and (distance >= SOS_MIN_RESPONDER_DISTANCE_KM)
 
         alert_data = alert.to_dict()
         alert_data['distance_km'] = distance
@@ -791,15 +848,20 @@ def api_respond_sos(alert_id):
     if alert.triggered_by == current_user.id:
         return jsonify({'status': 'error', 'message': 'You cannot claim reward on your own SOS trigger!'}), 400
 
-    data = request.json or {}
-    user_lat = float(data.get('user_lat', 23.7950))
-    user_lng = float(data.get('user_lng', 90.4120))
+    data = request.get_json(silent=True) or {}
+    try:
+        user_lat = float(data.get('user_lat', 23.7950))
+        user_lng = float(data.get('user_lng', 90.4120))
+    except (TypeError, ValueError):
+        return jsonify({'status': 'error', 'message': 'Invalid responder coordinates'}), 400
     distance = calculate_haversine(user_lat, user_lng, alert.alert_lat, alert.alert_lng)
 
-    if distance < 1.0:
+    # Anti-fraud rule: responders must be dispatched from at least 1 km away, so a
+    # passenger (or someone riding with them) cannot claim the reward for their own alert.
+    if distance < SOS_MIN_RESPONDER_DISTANCE_KM:
         return jsonify({
             'status': 'error',
-            'message': f'Reward verification requires responder to be at least 1.0 km away to prevent fraud. You are currently {distance:.2f} km away.'
+            'message': f'Reward verification requires responder to be at least {SOS_MIN_RESPONDER_DISTANCE_KM:.1f} km away to prevent fraud. You are currently {distance:.2f} km away.'
         }), 400
 
     alert.responder_id = current_user.id
@@ -821,7 +883,7 @@ def generate_invoice(ride_id):
         flash('Ride not found.', 'danger')
         return redirect(url_for('index'))
 
-    if ride.passenger_id != current_user.id and current_user.role != 'admin' and ride.driver_id != current_user.id:
+    if not can_access_ride(ride):
         flash('Unauthorized access to trip invoice.', 'danger')
         return redirect(url_for('index'))
 
@@ -879,19 +941,11 @@ def view_html_receipt(ride_id):
     if not ride:
         flash('Ride not found.', 'danger')
         return redirect(url_for('index'))
-    if ride.passenger_id != current_user.id and current_user.role != 'admin' and ride.driver_id != current_user.id:
+    if not can_access_ride(ride):
         flash('Unauthorized access to receipt.', 'danger')
         return redirect(url_for('index'))
     return render_template('invoice.html', ride=ride)
 
 if __name__ == '__main__':
-    with app.app_context():
-        try:
-            db.create_all()
-            if User.query.count() == 0:
-                from seed import seed_database
-                seed_database()
-        except Exception:
-            pass
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

@@ -39,11 +39,11 @@
                         <tbody>
                             {% for rev in reviews %}
                             <tr>
-                                <td class="fw-semibold text-white small">{{ rev.passenger_name }}</td>
+                                <td class="fw-semibold text-white small">{{ rev.passenger.full_name if rev.passenger else 'Passenger' }}</td>
                                 <td>
                                     <span class="text-warning fw-bold">★ {{ rev.rating }}/5</span>
                                 </td>
-                                <td class="text-light small">{{ rev.comment or 'Clean car and polite driver' }}</td>
+                                <td class="text-light small">{{ rev.comment or 'No written feedback' }}</td>
                                 <td class="text-end text-secondary extra-small">{{ rev.created_at.strftime('%b %d, %Y') }}</td>
                             </tr>
                             {% else %}

@@ -1,14 +1,10 @@
 import unittest
-import json
-from io import BytesIO
 from app import app, db
 from models import User, DriverProfile, TrustedContact, Ride, Payment, Review, SOSAlert
 
 class CityCabComprehensiveQATest(unittest.TestCase):
     def setUp(self):
         app.config['TESTING'] = True
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        app.config['WTF_CSRF_ENABLED'] = False
         self.client = app.test_client()
 
         with app.app_context():

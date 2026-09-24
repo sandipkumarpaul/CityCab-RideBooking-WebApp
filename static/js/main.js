@@ -112,6 +112,8 @@ function handleAddressSearch(type) {
     }
 }
 
+const suggestionItems = {};
+
 function renderSuggestions(type, items) {
     const dropdownEl = document.getElementById(type + '_suggestions');
     if (!items || items.length === 0) {
@@ -119,14 +121,15 @@ function renderSuggestions(type, items) {
         return;
     }
 
+    suggestionItems[type] = items;
     let html = '';
-    items.forEach((item) => {
+    items.forEach((item, idx) => {
         html += `
-            <div class="autocomplete-item" onclick="selectLocationOption('${type}', '${escapeHtml(item.title)}', ${item.lat}, ${item.lng})">
+            <div class="autocomplete-item" onclick="pickSuggestion('${type}', ${idx})">
                 <i class="fa-solid fa-location-dot"></i>
                 <div>
-                    <div class="autocomplete-title">${item.title}</div>
-                    <div class="autocomplete-subtitle">${item.subtitle}</div>
+                    <div class="autocomplete-title">${escapeHtml(item.title)}</div>
+                    <div class="autocomplete-subtitle">${escapeHtml(item.subtitle)}</div>
                 </div>
             </div>
         `;
@@ -136,8 +139,19 @@ function renderSuggestions(type, items) {
     dropdownEl.classList.remove('d-none');
 }
 
+function pickSuggestion(type, idx) {
+    const item = (suggestionItems[type] || [])[idx];
+    if (item) selectLocationOption(type, item.title, item.lat, item.lng);
+}
+
+// Geocoder results are third-party data, so escape them before inserting into the DOM.
 function escapeHtml(text) {
-    return text.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function selectLocationOption(type, title, lat, lng) {
@@ -234,6 +248,10 @@ function initDashboardMap() {
 }
 
 function recalculateFare() {
+    // Only the booking page has a fare panel; skip the API call everywhere else.
+    const distanceEl = document.getElementById('distance-display');
+    if (!distanceEl) return;
+
     const pLat = parseFloat(document.getElementById('pickup_lat')?.value || 23.7937);
     const pLng = parseFloat(document.getElementById('pickup_lng')?.value || 90.4066);
     const dLat = parseFloat(document.getElementById('dropoff_lat')?.value || 23.7771);
@@ -250,7 +268,7 @@ function recalculateFare() {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            document.getElementById('distance-display').innerText = data.distance_km.toFixed(2) + ' km';
+            distanceEl.innerText = data.distance_km.toFixed(2) + ' km';
             if (document.getElementById('price-Bike')) document.getElementById('price-Bike').innerText = '$' + data.estimates.Bike.toFixed(2);
             if (document.getElementById('price-CNG')) document.getElementById('price-CNG').innerText = '$' + data.estimates.CNG.toFixed(2);
             if (document.getElementById('price-Economy')) document.getElementById('price-Economy').innerText = '$' + data.estimates.Economy.toFixed(2);

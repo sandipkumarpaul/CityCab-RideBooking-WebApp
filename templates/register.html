@@ -21,6 +21,9 @@
 
                                 <input type="radio" class="btn-check" name="role" id="role_driver" value="driver" onchange="toggleDriverFields()">
                                 <label class="btn btn-outline-info fw-bold py-2" for="role_driver">🚕 Driver</label>
+
+                                <input type="radio" class="btn-check" name="role" id="role_responder" value="responder" onchange="toggleDriverFields()">
+                                <label class="btn btn-outline-danger fw-bold py-2" for="role_responder">🚨 Responder</label>
                             </div>
                         </div>
 
@@ -42,7 +45,7 @@
 
                         <div class="mb-3">
                             <label class="form-label text-light fw-semibold">Password</label>
-                            <input type="password" name="password" class="form-control bg-secondary text-white border-0" placeholder="••••••••" required>
+                            <input type="password" name="password" class="form-control bg-secondary text-white border-0" placeholder="••••••••" minlength="4" required>
                         </div>
 
                         <div id="driver_fields" class="p-3 bg-black rounded border border-info mb-3 d-none">
@@ -55,6 +58,8 @@
                                 <div class="col-md-6 mb-2">
                                     <label class="form-label text-light small">Vehicle Tier</label>
                                     <select name="vehicle_tier" class="form-select bg-secondary text-white border-0 form-select-sm">
+                                        <option value="Bike">Bike (Motorcycle)</option>
+                                        <option value="CNG">CNG (Auto-Rickshaw)</option>
                                         <option value="Economy">Economy (Standard)</option>
                                         <option value="Comfort" selected>Comfort (Sedan/AC)</option>
                                         <option value="Premium">Premium (Luxury)</option>
