@@ -1,3 +1,0 @@
-cd c:\Users\sandi\Downloads\CSE391\Project_CSE391_Sandip
-.\venv\Scripts\python.exe seed.py
-.\venv\Scripts\python.exe app.py

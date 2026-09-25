@@ -158,7 +158,7 @@
                         <tbody>
                             {% for rev in reviews %}
                             <tr>
-                                <td class="fw-semibold text-white small">{{ rev.passenger_name }}</td>
+                                <td class="fw-semibold text-white small">{{ rev.passenger.full_name if rev.passenger else 'Passenger' }}</td>
                                 <td>
                                     <span class="text-warning fw-bold">★ {{ rev.rating }}/5</span>
                                 </td>

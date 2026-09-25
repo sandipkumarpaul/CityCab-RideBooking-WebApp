@@ -21,3 +21,9 @@ __pycache__/
 Thumbs.db
 .vscode/
 .idea/
+
+# Flask instance folder (local SQLite database lives here)
+instance/
+
+# Test / tool caches
+.pytest_cache/

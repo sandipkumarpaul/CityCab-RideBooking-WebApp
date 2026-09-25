@@ -207,6 +207,8 @@ class Review(db.Model):
     comment = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    driver = db.relationship('User', foreign_keys=[driver_id])
+
     def to_dict(self):
         return {
             'id': self.id,
