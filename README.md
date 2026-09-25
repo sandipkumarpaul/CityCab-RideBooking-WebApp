@@ -6,9 +6,7 @@
 
 CityCab is a full-stack ride-hailing web app set in Dhaka, Bangladesh. It has four roles (passengers, drivers, community safety responders and admins), each with its own dashboard. Passengers pick a route on a live map, compare fares across five vehicle tiers, watch their driver drive along real roads, pay through simulated bKash/Nagad/card gateways, and download PDF invoices. A built-in **SOS system** alerts trusted contacts and pays nearby community responders a reward for checking on a passenger in trouble.
 
-I built it as a university web programming project.
-
-**Live demo:** https://sandipkumarpaul.pythonanywhere.com
+I built it as a university web programming project. It isn't hosted anymore, but it runs locally in a couple of minutes (see [Getting started](#getting-started)).
 
 | Login with demo accounts | Admin analytics |
 | --- | --- |
